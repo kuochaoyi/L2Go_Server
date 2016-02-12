@@ -7,7 +7,7 @@ import (
 //"strconv"
 
 //"golang.org/x/crypto/bcrypt"
-//"golang.org/x/crypto/bcrypt"
+	"../config"
 
 //"./serverpackets"
 )
@@ -16,7 +16,7 @@ type LoginServer struct {
 	//clients             []*models.Client
 	//gameservers         []*models.GameServer
 	//database            *mgo.Database
-	//config              config.ConfigObject
+	config              config.ConfigObject
 	internalServersList []byte
 	externalServersList []byte
 	status              loginServerStatus
@@ -33,20 +33,20 @@ type loginServerStatus struct {
 	hackAttempts              uint32
 }
 
-//func New(cfg config.ConfigObject) *LoginServer {
-//	return &LoginServer{config: cfg}
-//}
+func Create(cfg config.ConfigObject) *LoginServer {
+	return &LoginServer{config: cfg}
+}
 
-func (l *LoginServer) init() {
+func (l *LoginServer) Init() {
 	var err error
 
 	// Connect to our database
 	//l.databaseSession, err = mgo.Dial(l.config.LoginServer.Database.Host + ":" + strconv.Itoa(l.config.LoginServer.Database.Port))
-	if err != nil {
-		panic("Couldn't connect to the database server.")
-	} else {
-		log.Print("Successfully connected to the database server.")
-	}
+	//if err != nil {
+	//	panic("Couldn't connect to the database server.")
+	//} else {
+	//	log.Print("Successfully connected to the database server.")
+	//}
 
 	// Select the appropriate database
 	//l.database = l.databaseSession.DB(l.config.LoginServer.Database.Name)
