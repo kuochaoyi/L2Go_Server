@@ -1,4 +1,4 @@
-L2Go
+L2Go [![Build Status](https://travis-ci.org/kuochaoyi/L2Go_Server.svg?branch=master)](https://travis-ci.org/kuochaoyi/L2Go_Server)
 ====
 
 L2Go is an open-source Lineage ][ server emulator written in Golang.
