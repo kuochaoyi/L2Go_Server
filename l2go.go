@@ -6,8 +6,8 @@ import (
 	"runtime"
 
 	"./config"
+	"./gameserver"
 	"./loginserver"
-//"./gameserver"
 )
 
 func main() {
@@ -25,20 +25,20 @@ func main() {
 		server := loginserver.Create(globalConfig)
 		server.Init()
 		server.Start()
-		//} else {
-		//	// Try to load the Game Server configuration
-		//	if gameServerId >= 1 && len(globalConfig.GameServers) >= gameServerId {
-		//		config := config.GameServerConfigObject{}
-		//		config.LoginServer = globalConfig.LoginServer
-		//		config.GameServer = globalConfig.GameServers[gameServerId-1]
-		//		server := gameserver.New(config)
-		//		server.Init()
-		//		server.Start()
 	} else {
-		log.Print("No configuration found for the specified server.")
-	}
+		// Try to load the Game Server configuration
+		if gameServerID >= 1 && len(globalConfig.GameServers) >= gameServerID {
+			config := config.GameServerConfigObject{}
+			config.LoginServer = globalConfig.LoginServer
+			config.GameServer = globalConfig.GameServers[gameServerID - 1]
+			server := gameserver.Create(config)
+			server.Init()
+			server.Start()
+		} else {
+			log.Print("No configuration found for the specified server.")
+		}
 
-	//}
+	}
 
 	log.Print("Server stopped.")
 }

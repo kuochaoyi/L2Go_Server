@@ -2,10 +2,11 @@ package models
 
 import (
 	"errors"
-	"fmt"
-	"github.com/frostwind/l2go/gameserver/crypt/xor"
-	"github.com/frostwind/l2go/packets"
+	"log"
 	"net"
+
+	"../../packets"
+	"../crypt/xor"
 )
 
 type Client struct {
@@ -50,14 +51,14 @@ func (c *Client) Receive(params ...bool) (opcode byte, data []byte, e error) {
 	}
 
 	// Print the raw packet
-	fmt.Printf("Raw packet : %X%X\n", header, data)
+	log.Printf("Raw packet : %X%X\n", header, data)
 
 	if doXor == true {
 		// Decrypt the packet data using the xor key
 		xor.Decrypt(data, c.Cipher.InputKey)
 
 		// Print the decrypted packet
-		fmt.Printf("Decrypted packet content : %X\n", data)
+		log.Printf("Decrypted packet content : %X\n", data)
 
 		if err != nil {
 			return 0x00, nil, errors.New("An error occured while decrypting the packet data.")
