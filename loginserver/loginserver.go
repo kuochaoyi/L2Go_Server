@@ -1,176 +1,298 @@
 package loginserver
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
+//"bytes"
 	"log"
 	"net"
-	"os"
+//"strconv"
 
-	//"golang.org/x/crypto/bcrypt"
+//"golang.org/x/crypto/bcrypt"
+//"golang.org/x/crypto/bcrypt"
 
-	"./crypt/blowfish"
+//"./serverpackets"
 )
 
-func init() {
-	modulus, key := generateRSA()
+type LoginServer struct {
+	//clients             []*models.Client
+	//gameservers         []*models.GameServer
+	//database            *mgo.Database
+	//config              config.ConfigObject
+	internalServersList []byte
+	externalServersList []byte
+	status              loginServerStatus
+	//databaseSession     *mgo.Session
+	clientsListener     net.Listener
+	gameServersListener net.Listener
+}
 
-	ln, err := net.Listen("tcp", ":2106")
-	defer ln.Close()
+type loginServerStatus struct {
+	successfulAccountCreation uint32
+	failedAccountCreation     uint32
+	successfulLogins          uint32
+	failedLogins              uint32
+	hackAttempts              uint32
+}
 
+//func New(cfg config.ConfigObject) *LoginServer {
+//	return &LoginServer{config: cfg}
+//}
+
+func (l *LoginServer) init() {
+	var err error
+
+	// Connect to our database
+	//l.databaseSession, err = mgo.Dial(l.config.LoginServer.Database.Host + ":" + strconv.Itoa(l.config.LoginServer.Database.Port))
 	if err != nil {
-		log.Print("Couldn't initialize the Login Server")
+		panic("Couldn't connect to the database server.")
 	} else {
-		log.Print("Login Server initialized.")
-		log.Print("Listening on 127.0.0.1:2106.")
+		log.Print("Successfully connected to the database server.")
 	}
 
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			log.Print("Couldn't accept the incoming connection.")
-			continue
-		}
+	// Select the appropriate database
+	//l.database = l.databaseSession.DB(l.config.LoginServer.Database.Name)
 
-		go handleConnection(conn, modulus, key)
+	// Listen for client connections
+	l.clientsListener, err = net.Listen("tcp", ":2106")
+	if err != nil {
+		log.Print("Couldn't initialize the Login Server (Clients listener).")
+	} else {
+		log.Print("Login Server listening for clients connections on port 2106.")
 	}
+
+	// Listen for game servers connections
+	//l.gameServersListener, err = net.Listen("tcp", ":9413")
+	//if err != nil {
+	//	log.Println("Couldn't initialize the Login Server (Gameservers listener)")
+	//} else {
+	//	log.Println("Login Server listening for gameservers connections on port 9413")
+	//}
 }
 
-func handleConnection(conn net.Conn, modulus []byte, key *rsa.PrivateKey) {
+func (l *LoginServer) Start() {
+	//defer l.databaseSession.Close()
+	defer l.clientsListener.Close()
+	//defer l.gameServersListener.Close()
 
-	// Create the packet wrapper
-	packet := []byte{0x00,
-		0xfd, 0x8a, 0x22, 0x00, 0x5a, 0x78, 0x00, 0x00, // Header
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // Fake RSA key modulus
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Unknown
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	done := make(chan bool)
 
-	// Inject our modulus
-	for i := 0; i < len(modulus); i++ {
-		packet[9 + i] = modulus[i]
-	}
-
-	length := len(packet) + 2
-	buffer := make([]byte, length)
-
-	buffer[0] = byte(length & 0xff)
-	buffer[1] = byte((length >> 8) & 0xff)
-	copy(buffer[2:], packet)
-
-	log.Print("A client is trying to connect...")
-	log.Printf("Created a an init packet[%d] = %X\n", len(buffer), buffer)
-
-	log.Print("Sending the Init packet...")
-	conn.Write([]byte(buffer))
-
-	log.Print("Receiving the Init response")
-	for {
-
-		// Receive the packet header (size)
-		header := make([]byte, 2)
-
-		_, _ = conn.Read(header)
-
-		// Calculate the packet size
-		var size int = 0
-		size = size + int(header[0])
-		size = size + (int(header[1]) * 256)
-
-		if size > 0 {
-
-			log.Printf("Received a packet header...\n")
-			log.Printf("Expected packet length: %d\n", size - 2)
-
-			// Receive the content packet
-			data := make([]byte, size - 2)
-
-			n, _ := conn.Read(data)
-
-			log.Printf("Actual packet length: %d\n", n)
-
-			if n != size - 2 {
-				log.Print("Packet size error !!")
+	go func() {
+		for {
+			var err error
+			//client := models.NewClient()
+			//client.Socket, err = l.clientsListener.Accept()
+			//l.clients = append(l.clients, client)
+			if err != nil {
+				log.Print("Couldn't accept the incoming connection.")
+				continue
+			} else {
+				//go l.handleClientPackets(client)
 			}
+		}
+		done <- true
+	}()
 
-			log.Printf("Packet content : %X%X\n", header, data)
-
-			decrypted := blowfishDecrypt(data, []byte(";5.]94-31==-%xT!^[$\000"), size - 2)
-			log.Printf("Decrypted packet content : %X\n", decrypted)
-
-			//decoded, _ := rsa.DecryptPKCS1v15(rand.Reader, key, decrypted)
-			//log.Println(decoded)
+	go func() {
+		for {
+			var err error
+			//gameserver := models.NewGameServer()
+			//gameserver.Socket, err = l.gameServersListener.Accept()
+			//l.gameservers = append(l.gameservers, gameserver)
+			if err != nil {
+				log.Print("Couldn't accept the incoming connection.")
+				continue
+			} else {
+				//go l.handleGameServerPackets(gameserver)
+			}
 		}
 
+		done <- true
+	}()
+
+	for i := 0; i < 2; i++ {
+		<-done
 	}
 
 }
 
-func blowfishDecrypt(encrypted, key []byte, size int) []byte {
-	// create the cipher
-	dcipher, err := blowfish.NewCipher(key)
-	if err != nil {
-		// fix this. its okay for this tester program, but...
-		panic(err)
-	}
+//func (l *LoginServer) kickClient(client *models.Client) {
+//	client.Socket.Close()
+//
+//	for i, item := range l.clients {
+//		if bytes.Equal(item.SessionID, client.SessionID) {
+//			copy(l.clients[i:], l.clients[i + 1:])
+//			l.clients[len(l.clients) - 1] = nil
+//			l.clients = l.clients[:len(l.clients) - 1]
+//			break
+//		}
+//	}
+//
+//	log.Println("The client has been successfully kicked from the server.")
+//}
 
-	count := len(encrypted) / 8
+//func (l *LoginServer) handleGameServerPackets(gameserver *models.GameServer) {
+//	defer gameserver.Socket.Close()
+//
+//	for {
+//		opcode, _, err := gameserver.Receive()
+//
+//		if err != nil {
+//			log.Println(err)
+//			log.Println("Closing the connection...")
+//			break
+//		}
+//
+//		switch opcode {
+//		case 00:
+//			log.Println("A game server sent a request to register")
+//		default:
+//			log.Println("Can't recognize the packet sent by the gameserver")
+//		}
+//	}
+//}
 
-	decrypted := make([]byte, size)
-
-	for i := 0; i < count; i++ {
-		dcipher.Decrypt(decrypted[i * 8:i * 8 + 8], encrypted[i * 8:i * 8 + 8])
-	}
-
-	return decrypted
-}
-
-func generateRSA() ([]byte, *rsa.PrivateKey) {
-	privatekey, err := rsa.GenerateKey(rand.Reader, 1024)
-
-	if err != nil {
-		log.Print(err.Error)
-		os.Exit(1)
-	}
-
-	var publickey *rsa.PublicKey
-	publickey = &privatekey.PublicKey
-	scrambledModulus := publickey.N.Bytes() // modulus to bytes
-
-	for i := 0; i < 4; i++ {
-		temp := scrambledModulus[0x00 + i]
-		scrambledModulus[0x00 + i] = scrambledModulus[0x4d + i]
-		scrambledModulus[0x4d + i] = temp
-	}
-
-	// step 2 xor first 0x40 bytes with last 0x40 bytes
-	for i := 0; i < 0x40; i++ {
-		scrambledModulus[i] = byte(scrambledModulus[i] ^ scrambledModulus[0x40 + i])
-	}
-
-	// step 3 xor bytes 0x0d-0x10 with bytes 0x34-0x38
-	for i := 0; i < 4; i++ {
-		scrambledModulus[0x0d + i] = byte(scrambledModulus[0x0d + i] ^ scrambledModulus[0x34 + i])
-	}
-
-	// step 4 xor last 0x40 bytes with first 0x40 bytes
-	for i := 0; i < 0x40; i++ {
-		scrambledModulus[0x40 + i] = byte(scrambledModulus[0x40 + i] ^ scrambledModulus[i])
-	}
-
-	return scrambledModulus, privatekey
-}
+//func (l *LoginServer) handleClientPackets(client *models.Client) {
+//	log.Println("A client is trying to connect...")
+//	defer l.kickClient(client)
+//
+//	buffer := serverpackets.NewInitPacket()
+//	err := client.Send(buffer, false, false)
+//
+//	if err != nil {
+//		log.Println(err)
+//		return
+//	} else {
+//		log.Println("Init packet sent.")
+//	}
+//
+//	for {
+//		opcode, data, err := client.Receive()
+//
+//		if err != nil {
+//			log.Println(err)
+//			log.Println("Closing the connection...")
+//			break
+//		}
+//
+//		switch opcode {
+//		case 00:
+//			// response buffer
+//			var buffer []byte
+//
+//			requestAuthLogin := clientpackets.NewRequestAuthLogin(data)
+//
+//			log.Printf("User %s is trying to login\n", requestAuthLogin.Username)
+//
+//			accounts := l.database.C("accounts")
+//			err := accounts.Find(bson.M{"username": requestAuthLogin.Username}).One(&client.Account)
+//
+//			if err != nil {
+//				if l.config.LoginServer.AutoCreate == true {
+//					hashedPassword, err := bcrypt.GenerateFromPassword([]byte(requestAuthLogin.Password), 10)
+//					if err != nil {
+//						log.Println("An error occured while trying to generate the password")
+//						l.status.failedAccountCreation += 1
+//
+//						buffer = serverpackets.NewLoginFailPacket(serverpackets.REASON_SYSTEM_ERROR)
+//					} else {
+//						client.Account = models.Account{
+//							Id:          bson.NewObjectId(),
+//							Username:    requestAuthLogin.Username,
+//							Password:    string(hashedPassword),
+//							AccessLevel: ACCESS_LEVEL_PLAYER}
+//
+//						err = accounts.Insert(&client.Account)
+//						if err != nil {
+//							log.Printf("Couldn't create an account for the user %s\n", requestAuthLogin.Username)
+//							l.status.failedAccountCreation += 1
+//
+//							buffer = serverpackets.NewLoginFailPacket(serverpackets.REASON_SYSTEM_ERROR)
+//						} else {
+//							log.Printf("Account successfully created for the user %s\n", requestAuthLogin.Username)
+//							l.status.successfulAccountCreation += 1
+//
+//							buffer = serverpackets.NewLoginOkPacket(client.SessionID)
+//						}
+//					}
+//				} else {
+//					log.Println("Account not found !")
+//					l.status.failedLogins += 1
+//
+//					buffer = serverpackets.NewLoginFailPacket(serverpackets.REASON_USER_OR_PASS_WRONG)
+//				}
+//			} else {
+//				// Account exists; Is the password ok?
+//				err = bcrypt.CompareHashAndPassword([]byte(client.Account.Password), []byte(requestAuthLogin.Password))
+//
+//				if err != nil {
+//					log.Printf("Wrong password for the account %s\n", requestAuthLogin.Username)
+//					l.status.failedLogins += 1
+//
+//					buffer = serverpackets.NewLoginFailPacket(serverpackets.REASON_USER_OR_PASS_WRONG)
+//				} else {
+//
+//					if client.Account.AccessLevel >= ACCESS_LEVEL_PLAYER {
+//						l.status.successfulLogins += 1
+//
+//						buffer = serverpackets.NewLoginOkPacket(client.SessionID)
+//					} else {
+//						l.status.failedLogins += 1
+//
+//						buffer = serverpackets.NewLoginFailPacket(serverpackets.REASON_ACCESS_FAILED)
+//					}
+//
+//				}
+//			}
+//
+//			err = client.Send(buffer)
+//
+//			if err != nil {
+//				log.Println(err)
+//			}
+//
+//		case 02:
+//			requestPlay := clientpackets.NewRequestPlay(data)
+//
+//			log.Printf("The client wants to connect to the server : %d\n", requestPlay.ServerID)
+//
+//			var buffer []byte
+//			if len(l.config.GameServers) >= int(requestPlay.ServerID) && (l.config.GameServers[requestPlay.ServerID - 1].Options.Testing == false || client.Account.AccessLevel > ACCESS_LEVEL_PLAYER) {
+//				if !bytes.Equal(client.SessionID[:8], requestPlay.SessionID) {
+//					l.status.hackAttempts += 1
+//
+//					buffer = serverpackets.NewLoginFailPacket(serverpackets.REASON_ACCESS_FAILED)
+//				} else {
+//					buffer = serverpackets.NewPlayOkPacket()
+//				}
+//			} else {
+//				l.status.hackAttempts += 1
+//
+//				buffer = serverpackets.NewPlayFailPacket(serverpackets.REASON_ACCESS_FAILED)
+//			}
+//			err := client.Send(buffer)
+//
+//			if err != nil {
+//				log.Println(err)
+//			}
+//
+//		case 05:
+//			requestServerList := clientpackets.NewRequestServerList(data)
+//
+//			var buffer []byte
+//			if !bytes.Equal(client.SessionID[:8], requestServerList.SessionID) {
+//				l.status.hackAttempts += 1
+//
+//				buffer = serverpackets.NewLoginFailPacket(serverpackets.REASON_ACCESS_FAILED)
+//			} else {
+//				buffer = serverpackets.NewServerListPacket(l.config.GameServers, client.Socket.RemoteAddr().String())
+//			}
+//			err := client.Send(buffer)
+//
+//			if err != nil {
+//				log.Println(err)
+//			}
+//
+//		default:
+//			log.Println("Couldn't detect the packet type.")
+//		}
+//	}
+//}
