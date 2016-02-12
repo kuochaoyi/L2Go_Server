@@ -23,5 +23,8 @@ License
 L2Go is under the ___ v_.0 license.
 
 Made with love by Kuo.ChaoYi <Kuo.ChaoYi@gmail.com>
-prototype source by mikesaidani(Frostwind <hi@frostwind.me>) <https://github.com/mikesaidani/l2go>
+
+prototype source by mikesaidani
+
+Frostwind <hi@frostwind.me>) <https://github.com/mikesaidani/l2go>
 
