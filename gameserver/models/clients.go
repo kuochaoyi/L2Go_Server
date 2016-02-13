@@ -4,9 +4,9 @@ import (
 	"errors"
 	"log"
 	"net"
-
 	"../../packets"
 	"../crypt/xor"
+// "crypto/cipher/xor"
 )
 
 type Client struct {
@@ -38,15 +38,15 @@ func (c *Client) Receive(params ...bool) (opcode byte, data []byte, e error) {
 	// Calculate the packet size
 	size := 0
 	size = size + int(header[0])
-	size = size + int(header[1])*256
+	size = size + int(header[1]) * 256
 
 	// Allocate the appropriate size for our data (size - 2 bytes used for the length
-	data = make([]byte, size-2)
+	data = make([]byte, size - 2)
 
 	// Read the encrypted part of the packet
 	n, err = c.Socket.Read(data)
 
-	if n != size-2 || err != nil {
+	if n != size - 2 || err != nil {
 		return 0x00, nil, errors.New("An error occured while reading the packet data.")
 	}
 

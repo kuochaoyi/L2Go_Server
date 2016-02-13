@@ -13,21 +13,21 @@ func Checksum(raw []byte) bool {
 
 	for i = 0; i < count; i += 4 {
 		var ecx int = int(raw[i])
-		ecx |= int(raw[i + 1]) << 8
-		ecx |= int(raw[i + 2]) << 0x10
-		ecx |= int(raw[i + 3]) << 0x18
+		ecx |= int(raw[i+1]) << 8
+		ecx |= int(raw[i+2]) << 0x10
+		ecx |= int(raw[i+3]) << 0x18
 		chksum ^= ecx
 	}
 
 	var ecx int = int(raw[i])
-	ecx |= int(raw[i + 1]) << 8
-	ecx |= int(raw[i + 2]) << 0x10
-	ecx |= int(raw[i + 3]) << 0x18
+	ecx |= int(raw[i+1]) << 8
+	ecx |= int(raw[i+2]) << 0x10
+	ecx |= int(raw[i+3]) << 0x18
 
 	raw[i] = byte(chksum)
-	raw[i + 1] = byte(chksum >> 0x08)
-	raw[i + 2] = byte(chksum >> 0x10)
-	raw[i + 3] = byte(chksum >> 0x18)
+	raw[i+1] = byte(chksum >> 0x08)
+	raw[i+2] = byte(chksum >> 0x10)
+	raw[i+3] = byte(chksum >> 0x18)
 
 	return ecx == chksum
 }
@@ -40,7 +40,7 @@ func BlowfishDecrypt(encrypted, key []byte) ([]byte, error) {
 	}
 
 	// Check if the encrypted data is a multiple of our block size
-	if len(encrypted) % 8 != 0 {
+	if len(encrypted)%8 != 0 {
 		return nil, errors.New("The encrypted data is not a multiple of the block size")
 	}
 
@@ -49,7 +49,7 @@ func BlowfishDecrypt(encrypted, key []byte) ([]byte, error) {
 	decrypted := make([]byte, len(encrypted))
 
 	for i := 0; i < count; i++ {
-		cipher.Decrypt(decrypted[i * 8:], encrypted[i * 8:])
+		cipher.Decrypt(decrypted[i*8:], encrypted[i*8:])
 	}
 
 	return decrypted, nil
@@ -63,7 +63,7 @@ func BlowfishEncrypt(decrypted, key []byte) ([]byte, error) {
 	}
 
 	// Check if the decrypted data is a multiple of our block size
-	if len(decrypted) % 8 != 0 {
+	if len(decrypted)%8 != 0 {
 		return nil, errors.New("The decrypted data is not a multiple of the block size")
 	}
 
@@ -72,7 +72,7 @@ func BlowfishEncrypt(decrypted, key []byte) ([]byte, error) {
 	encrypted := make([]byte, len(decrypted))
 
 	for i := 0; i < count; i++ {
-		cipher.Encrypt(encrypted[i * 8:], decrypted[i * 8:])
+		cipher.Encrypt(encrypted[i*8:], decrypted[i*8:])
 	}
 
 	return encrypted, nil
