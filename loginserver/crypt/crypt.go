@@ -3,7 +3,7 @@ package crypt
 import (
 	"errors"
 
-	"./blowfish"
+	"golang.org/x/crypto/blowfish"
 )
 
 func Checksum(raw []byte) bool {
