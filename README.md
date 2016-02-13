@@ -1,7 +1,7 @@
 L2Go [![Build Status](https://travis-ci.org/kuochaoyi/L2Go_Server.svg?branch=master)](https://travis-ci.org/kuochaoyi/L2Go_Server)
 ====
 
-L2Go is an open-source Lineage ][ server emulator written in Golang.
+L2Go is an open-source Lineage ][ **Classic** server emulator written in Golang.
 
 Current Status
 ----
@@ -22,9 +22,9 @@ License
 
 L2Go is under the ___ v_.0 license.
 
-Made with love by Kuo.ChaoYi <Kuo.ChaoYi@gmail.com>
+Made with love by Kuo.ChaoYi (<Kuo.ChaoYi@gmail.com>)
 
 prototype source by mikesaidani
 
-Frostwind <hi@frostwind.me>) <https://github.com/mikesaidani/l2go>
+Frostwind (<hi@frostwind.me>) <https://github.com/mikesaidani/l2go>
 
