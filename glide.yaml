@@ -1,0 +1,17 @@
+package: l2go
+import:
+- package: /Users/kuochaoyi/golang/src/l2go/config
+- package: /Users/kuochaoyi/golang/src/l2go/crypt
+- package: /Users/kuochaoyi/golang/src/l2go/crypt/xor
+- package: /Users/kuochaoyi/golang/src/l2go/packets
+- package: clientpackets
+- package: config
+- package: gameserver
+- package: golang.org/x/crypto
+  subpackages:
+  - /bcrypt
+  - blowfish
+- package: loginserver
+- package: models
+- package: serverpackets
+- package: /Users/kuochaoyi/golang/src/packets
